@@ -15,3 +15,6 @@ localPort = 8000
 
 [[ports]]
 localPort = 8080
+
+[agent]
+expertMode = true
