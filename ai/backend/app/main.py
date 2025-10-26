@@ -438,31 +438,38 @@ def login(user_data: UserLogin):
         "role": user[4],
         "field_of_interest": user[5]
     }
+from datetime import datetime
 
-@app.post("/api/lessons")
-def create_lesson(lesson_data: dict):  # You might want to create a proper Pydantic model
-    conn = sqlite3.connect('ai_education.db')
-    c = conn.cursor()
+@app.route('/api/lessons', methods=['GET', 'POST', 'PUT', 'DELETE'])  # Accept all methods
+def create_lesson():
+        try:
+            data = request.get_json()
+            print("📨 Received data:", data)  # Debug print
 
-    # Insert new lesson
-    c.execute("""
-        INSERT INTO lessons (subject_id, teacher_id, topic_title, summary_content, date_conducted)
-        VALUES (?, ?, ?, ?, ?)
-    """, (
-        lesson_data['subject_id'],
-        lesson_data['teacher_id'], 
-        lesson_data['topic_title'],
-        lesson_data['summary_content'],
-        lesson_data.get('date_conducted', datetime.now().date())
-    ))
+            # Your existing code here
+            conn = sqlite3.connect('ai_education.db')
+            c = conn.cursor()
 
-    conn.commit()
-    lesson_id = c.lastrowid
-    conn.close()
+            # Use current date if not provided
+            date_conducted = data.get('date_conducted') or datetime.now().strftime('%Y-%m-%d')
 
-    return {"message": "Lesson created successfully", "lesson_id": lesson_id}
+            c.execute("""
+                INSERT INTO lessons (subject_id, teacher_id, topic_title, summary_content, date_conducted)
+                VALUES (?, ?, ?, ?, ?)
+            """, (data['subject_id'], data['teacher_id'], data['topic_title'], data['summary_content'], date_conducted))
 
+            conn.commit()
+            lesson_id = c.lastrowid
+            conn.close()
 
+            return {
+                "message": "Lesson created successfully", 
+                "lesson_id": lesson_id
+            }
+
+        except Exception as e:https://3da56e52-7331-4942-9d1f-16510b86b4e6-00-2ajqrela3k4w0.pike.replit.dev:3000/api/lessons
+            print("❌ Error:", str(e))
+            return {"error": str(e)}, 500
 @app.post("/api/assessments/generate")
 def generate_assessment(request: AssessmentRequest):
     conn = sqlite3.connect('ai_education.db')

@@ -20,52 +20,47 @@ const apiService = {
     }
   },
 
-  async getLessons(subjectId) {
-    try {
-      const response = await fetch(`/api/lessons/${subjectId}?t=${Date.now()}`)
-      if (!response.ok) return []
-      return await response.json()
-    } catch (error) {
-      return []
+async createLesson(lessonData) {
+  try {
+    console.log('📤 Sending lesson data:', lessonData)
+
+    // Make sure lessonData has the required fields
+    const dataToSend = {
+      subject_id: parseInt(lessonData.subject_id),
+      teacher_id: parseInt(lessonData.teacher_id) || 1, // default teacher
+      topic_title: lessonData.topic_title,
+      summary_content: lessonData.summary_content,
+      date_conducted: lessonData.date_conducted || new Date().toISOString().split('T')[0]
     }
-  },
 
-  async createLesson(lessonData) {
-    try {
-      console.log('📤 Sending lesson data:', lessonData)
+    console.log('📤 Final data being sent:', dataToSend)
 
-      const response = await fetch(`/api/lessons?t=${Date.now()}`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(lessonData)
-      })
+    const response = await fetch(`/api/lessons?t=${Date.now()}`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(dataToSend)
+    })
 
-      console.log('📡 Response status:', response.status)
+    console.log('📡 Response status:', response.status)
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('❌ Server error:', errorText)
-        throw new Error(`Server error: ${response.status} - ${errorText}`)
-      }
-
-      const result = await response.json()
-      console.log('✅ Lesson creation response:', result)
-      return result
-
-    } catch (error) {
-      console.error('❌ API Error - createLesson:', error)
-      // Still return success for demo purposes
-      return { 
-        message: 'Lesson created successfully (demo mode)',
-        lesson_id: Math.floor(Math.random() * 1000) + 1
-      }
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ Server error:', errorText)
+      throw new Error(`Server error: ${response.status}`)
     }
+
+    const result = await response.json()
+    console.log('✅ Lesson creation response:', result)
+    return result
+
+  } catch (error) {
+    console.error('❌ API Error - createLesson:', error)
+    throw error // Don't return fake success in production
   }
 }
-
+}
 function App() {
   const [currentView, setCurrentView] = useState('home')
   const [subjects, setSubjects] = useState([])
