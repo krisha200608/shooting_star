@@ -478,7 +478,7 @@ def create_lesson(lesson_data: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/lessons")
-def get_lessons():
+def get_all_lessons():
     try:
         conn = sqlite3.connect('ai_education.db')
         c = conn.cursor()
@@ -507,6 +507,39 @@ def get_lessons():
         
     except Exception as e:
         print("❌ Error fetching lessons:", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/lessons/{subject_id}")
+def get_lessons_by_subject(subject_id: int):
+    try:
+        conn = sqlite3.connect('ai_education.db')
+        c = conn.cursor()
+        
+        c.execute("""
+            SELECT l.*, s.subject_name 
+            FROM lessons l 
+            LEFT JOIN subjects s ON l.subject_id = s.subject_id
+            WHERE l.subject_id = ?
+            ORDER BY l.date_conducted DESC
+        """, (subject_id,))
+        
+        lessons = []
+        for row in c.fetchall():
+            lessons.append({
+                "lesson_id": row[0],
+                "subject_id": row[1],
+                "teacher_id": row[2],
+                "topic_title": row[3],
+                "summary_content": row[4],
+                "date_conducted": row[5],
+                "subject_name": row[6] if len(row) > 6 else None
+            })
+        
+        conn.close()
+        return lessons
+        
+    except Exception as e:
+        print("❌ Error fetching lessons by subject:", str(e))
         raise HTTPException(status_code=500, detail=str(e))
 @app.post("/api/assessments/generate")
 def generate_assessment(request: AssessmentRequest):
