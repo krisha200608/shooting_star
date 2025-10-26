@@ -592,7 +592,9 @@ def submit_assessment(submission: AssessmentSubmission):
 
     # Get assessment and questions
     c.execute("""
-        SELECT a.*, l.summary_content, s.subject_name 
+        SELECT a.assessment_id, a.student_id, a.lesson_id, a.questions, 
+               a.student_answers, a.ai_feedback, a.score, a.assessment_date,
+               l.summary_content, s.subject_name 
         FROM assessments a 
         JOIN lessons l ON a.lesson_id = l.lesson_id 
         JOIN subjects s ON l.subject_id = s.subject_id 
@@ -604,10 +606,14 @@ def submit_assessment(submission: AssessmentSubmission):
         conn.close()
         raise HTTPException(status_code=404, detail="Assessment not found")
 
-    questions = json.loads(assessment[3])  # questions are at index 3
+    questions = json.loads(assessment[3])  # questions at index 3
+    subject_name = assessment[9]  # subject_name at index 9
+
+    # Convert StudentAnswer objects to dictionaries
+    student_answers_dict = [{"question_id": ans.question_id, "answer": ans.answer} for ans in submission.student_answers]
 
     # Evaluate answers using AI
-    evaluation = ai_service.evaluate_answers(questions, submission.student_answers, assessment[7])  # subject_name at index 7
+    evaluation = ai_service.evaluate_answers(questions, student_answers_dict, subject_name)
 
     # Calculate score from percentage
     percentage = float(evaluation["scores"]["percentage"].strip('%'))
@@ -615,7 +621,7 @@ def submit_assessment(submission: AssessmentSubmission):
     # Update assessment with results
     c.execute(
         "UPDATE assessments SET student_answers = ?, ai_feedback = ?, score = ? WHERE assessment_id = ?",
-        (json.dumps(submission.student_answers), json.dumps(evaluation), percentage, submission.assessment_id)
+        (json.dumps(student_answers_dict), json.dumps(evaluation), percentage, submission.assessment_id)
     )
     conn.commit()
     conn.close()
