@@ -440,47 +440,28 @@ def login(user_data: UserLogin):
     }
 
 @app.post("/api/lessons")
-def create_lesson(lesson: LessonCreate):
+def create_lesson(lesson_data: dict):  # You might want to create a proper Pydantic model
     conn = sqlite3.connect('ai_education.db')
     c = conn.cursor()
 
-    # For demo, using teacher_id = 1
-    c.execute(
-        "INSERT INTO lessons (subject_id, teacher_id, topic_title, summary_content) VALUES (?, ?, ?, ?)",
-        (lesson.subject_id, 1, lesson.topic_title, lesson.summary_content)
-    )
-    lesson_id = c.lastrowid
-    conn.commit()
-    conn.close()
-
-    return {"message": "Lesson created", "lesson_id": lesson_id}
-
-@app.get("/api/lessons/{subject_id}")
-def get_lessons(subject_id: int):
-    conn = sqlite3.connect('ai_education.db')
-    c = conn.cursor()
-
+    # Insert new lesson
     c.execute("""
-        SELECT l.*, s.subject_name 
-        FROM lessons l 
-        JOIN subjects s ON l.subject_id = s.subject_id 
-        WHERE l.subject_id = ?
-    """, (subject_id,))
-    lessons = c.fetchall()
+        INSERT INTO lessons (subject_id, teacher_id, topic_title, summary_content, date_conducted)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        lesson_data['subject_id'],
+        lesson_data['teacher_id'], 
+        lesson_data['topic_title'],
+        lesson_data['summary_content'],
+        lesson_data.get('date_conducted', datetime.now().date())
+    ))
+
+    conn.commit()
+    lesson_id = c.lastrowid
     conn.close()
 
-    return [
-        {
-            "lesson_id": lesson[0],
-            "subject_id": lesson[1],
-            "teacher_id": lesson[2],
-            "topic_title": lesson[3],
-            "summary_content": lesson[4],
-            "date_conducted": lesson[5],
-            "subject_name": lesson[6]
-        }
-        for lesson in lessons
-    ]
+    return {"message": "Lesson created successfully", "lesson_id": lesson_id}
+
 
 @app.post("/api/assessments/generate")
 def generate_assessment(request: AssessmentRequest):
@@ -627,4 +608,4 @@ if __name__ == "__main__":
     import uvicorn
     print("🚀 Starting AI Student-Teacher System...")
     print(f"🤖 AI Service: {'ENABLED' if ai_service.ai_enabled else 'DISABLED - Check GEMINI_API_KEY in secrets'}")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="localhost", port=8000)
