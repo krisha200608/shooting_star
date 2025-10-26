@@ -438,38 +438,76 @@ def login(user_data: UserLogin):
         "role": user[4],
         "field_of_interest": user[5]
     }
-from datetime import datetime
 
-@app.route('/api/lessons', methods=['GET', 'POST', 'PUT', 'DELETE'])  # Accept all methods
-def create_lesson():
-        try:
-            data = request.get_json()
-            print("📨 Received data:", data)  # Debug print
+@app.post("/api/lessons")
+def create_lesson(lesson_data: dict):
+    try:
+        print("📨 Received lesson data:", lesson_data)
+        
+        conn = sqlite3.connect('ai_education.db')
+        c = conn.cursor()
 
-            # Your existing code here
-            conn = sqlite3.connect('ai_education.db')
-            c = conn.cursor()
+        # Use current date if not provided
+        date_conducted = lesson_data.get('date_conducted') or datetime.now().strftime('%Y-%m-%d')
+        
+        # Default teacher_id to 1 if not provided
+        teacher_id = lesson_data.get('teacher_id', 1)
 
-            # Use current date if not provided
-            date_conducted = data.get('date_conducted') or datetime.now().strftime('%Y-%m-%d')
+        c.execute("""
+            INSERT INTO lessons (subject_id, teacher_id, topic_title, summary_content, date_conducted)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            lesson_data['subject_id'], 
+            teacher_id, 
+            lesson_data['topic_title'], 
+            lesson_data['summary_content'], 
+            date_conducted
+        ))
 
-            c.execute("""
-                INSERT INTO lessons (subject_id, teacher_id, topic_title, summary_content, date_conducted)
-                VALUES (?, ?, ?, ?, ?)
-            """, (data['subject_id'], data['teacher_id'], data['topic_title'], data['summary_content'], date_conducted))
+        conn.commit()
+        lesson_id = c.lastrowid
+        conn.close()
 
-            conn.commit()
-            lesson_id = c.lastrowid
-            conn.close()
+        return {
+            "message": "Lesson created successfully", 
+            "lesson_id": lesson_id
+        }
 
-            return {
-                "message": "Lesson created successfully", 
-                "lesson_id": lesson_id
-            }
+    except Exception as e:
+        print("❌ Error creating lesson:", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
-        except Exception as e:https://3da56e52-7331-4942-9d1f-16510b86b4e6-00-2ajqrela3k4w0.pike.replit.dev:3000/api/lessons
-            print("❌ Error:", str(e))
-            return {"error": str(e)}, 500
+@app.get("/api/lessons")
+def get_lessons():
+    try:
+        conn = sqlite3.connect('ai_education.db')
+        c = conn.cursor()
+        
+        c.execute("""
+            SELECT l.*, s.subject_name 
+            FROM lessons l 
+            LEFT JOIN subjects s ON l.subject_id = s.subject_id
+            ORDER BY l.date_conducted DESC
+        """)
+        
+        lessons = []
+        for row in c.fetchall():
+            lessons.append({
+                "lesson_id": row[0],
+                "subject_id": row[1],
+                "teacher_id": row[2],
+                "topic_title": row[3],
+                "summary_content": row[4],
+                "date_conducted": row[5],
+                "subject_name": row[6] if len(row) > 6 else None
+            })
+        
+        conn.close()
+        return {"lessons": lessons}
+        
+    except Exception as e:
+        print("❌ Error fetching lessons:", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 @app.post("/api/assessments/generate")
 def generate_assessment(request: AssessmentRequest):
     conn = sqlite3.connect('ai_education.db')
