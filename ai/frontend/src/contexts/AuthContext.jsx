@@ -13,13 +13,10 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (token) {
-      // Verify token and get user data
-      authService.verifyToken(token).then(user => {
-        setCurrentUser(user)
-      }).catch(() => {
-        localStorage.removeItem('token')
-      })
+    const userData = localStorage.getItem('user')
+
+    if (token && userData) {
+      setCurrentUser(JSON.parse(userData))
     }
     setLoading(false)
   }, [])
@@ -27,18 +24,34 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const response = await authService.login(email, password)
     localStorage.setItem('token', response.access_token)
-    setCurrentUser(response.user)
+    localStorage.setItem('user', JSON.stringify({
+      user_id: response.user_id,
+      username: response.username,
+      role: response.role
+    }))
+    setCurrentUser({
+      user_id: response.user_id,
+      username: response.username,
+      role: response.role
+    })
+    return response
+  }
+
+  const register = async (userData) => {
+    const response = await authService.register(userData)
     return response
   }
 
   const logout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('user')
     setCurrentUser(null)
   }
 
   const value = {
     currentUser,
     login,
+    register,
     logout
   }
 
