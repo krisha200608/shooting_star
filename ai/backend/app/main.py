@@ -484,7 +484,8 @@ def get_all_lessons():
         c = conn.cursor()
         
         c.execute("""
-            SELECT l.*, s.subject_name 
+            SELECT l.lesson_id, l.subject_id, l.teacher_id, l.topic_title, 
+                   l.summary_content, l.keywords, l.date_conducted, s.subject_name 
             FROM lessons l 
             LEFT JOIN subjects s ON l.subject_id = s.subject_id
             ORDER BY l.date_conducted DESC
@@ -498,8 +499,9 @@ def get_all_lessons():
                 "teacher_id": row[2],
                 "topic_title": row[3],
                 "summary_content": row[4],
-                "date_conducted": row[5],
-                "subject_name": row[6] if len(row) > 6 else None
+                "keywords": row[5],
+                "date_conducted": row[6],
+                "subject_name": row[7]
             })
         
         conn.close()
@@ -516,7 +518,8 @@ def get_lessons_by_subject(subject_id: int):
         c = conn.cursor()
         
         c.execute("""
-            SELECT l.*, s.subject_name 
+            SELECT l.lesson_id, l.subject_id, l.teacher_id, l.topic_title, 
+                   l.summary_content, l.keywords, l.date_conducted, s.subject_name 
             FROM lessons l 
             LEFT JOIN subjects s ON l.subject_id = s.subject_id
             WHERE l.subject_id = ?
@@ -531,8 +534,9 @@ def get_lessons_by_subject(subject_id: int):
                 "teacher_id": row[2],
                 "topic_title": row[3],
                 "summary_content": row[4],
-                "date_conducted": row[5],
-                "subject_name": row[6] if len(row) > 6 else None
+                "keywords": row[5],
+                "date_conducted": row[6],
+                "subject_name": row[7]
             })
         
         conn.close()
@@ -548,7 +552,8 @@ def generate_assessment(request: AssessmentRequest):
 
     # Get lesson content with subject name
     c.execute("""
-        SELECT l.*, s.subject_name 
+        SELECT l.lesson_id, l.subject_id, l.teacher_id, l.topic_title, 
+               l.summary_content, l.keywords, l.date_conducted, s.subject_name 
         FROM lessons l 
         JOIN subjects s ON l.subject_id = s.subject_id 
         WHERE l.lesson_id = ?
@@ -560,7 +565,8 @@ def generate_assessment(request: AssessmentRequest):
         raise HTTPException(status_code=404, detail="Lesson not found")
 
     # Generate questions using AI
-    questions = ai_service.generate_questions(lesson[4], lesson[6])  # summary_content and subject_name
+    # lesson[4] = summary_content, lesson[7] = subject_name
+    questions = ai_service.generate_questions(lesson[4], lesson[7])
 
     # Create assessment record
     c.execute(
@@ -574,8 +580,8 @@ def generate_assessment(request: AssessmentRequest):
     return {
         "assessment_id": assessment_id,
         "questions": questions,
-        "lesson_topic": lesson[3],
-        "subject": lesson[6],
+        "lesson_topic": lesson[3],  # topic_title
+        "subject": lesson[7],  # subject_name
         "ai_enabled": ai_service.ai_enabled
     }
 
