@@ -1,0 +1,13 @@
+Month,Advertising,Price,Holiday,Sales
+January,2000,100,1,4500
+February,1800,105,0,4200
+March,2200,95,0,4700
+April,2500,90,1,5200
+May,2300,92,0,4900
+June,2800,85,0,5500
+July,3000,80,1,6000
+August,2700,88,0,5300
+September,2400,94,0,5000
+October,2600,87,0,5400
+November,3200,82,1,6500
+December,3500,78,1,7000
